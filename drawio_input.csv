@@ -1,31 +1,21 @@
-# label,source,target
-sig00_0_to_1,node_0,node_1
-sig01_1_to_2,node_1,node_2
-sig02_2_to_0,node_0,node_2
-sig03_3_to_4,node_3,node_4
-sig04_4_to_5,node_4,node_5
-sig05_5_to_3,node_3,node_5
-sig06_6_to_7,node_6,node_7
-sig07_7_to_8,node_7,node_8
-sig08_8_to_9,node_8,node_9
-sig09_9_to_6,node_6,node_9
-sig10_0_to_3,node_0,node_3
-sig11_1_to_4,node_1,node_4
-sig12_2_to_5,node_2,node_5
-sig13_3_to_6,node_3,node_6
-sig14_4_to_7,node_4,node_7
-sig15_5_to_8,node_5,node_8
-sig16_6_to_9,node_6,node_9
-sig17_7_to_0,node_0,node_7
-sig18_8_to_1,node_1,node_8
-sig19_9_to_2,node_2,node_9
-sig20_0_to_5,node_0,node_5
-sig21_1_to_6,node_1,node_6
-sig22_2_to_7,node_2,node_7
-sig23_3_to_8,node_3,node_8
-sig24_4_to_9,node_4,node_9
-sig25_5_to_0,node_0,node_5
-sig26_6_to_1,node_1,node_6
-sig27_7_to_2,node_2,node_7
-sig28_8_to_3,node_3,node_8
-sig29_9_to_4,node_4,node_9
+# label: %from_id%
+# style: label;
+# layout: horizontalflow
+# height: @height
+# connect: {"from":"to_id_out0", "to":"from_id", "fromlabel":"sig_out0", "invert": false, "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;curved=0;endArrow=blockThin;endFill=1;fontSize=11;"}
+# connect: {"from":"to_id_out1", "to":"from_id", "fromlabel":"sig_out1", "invert": false, "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;curved=0;endArrow=blockThin;endFill=1;fontSize=11;"}
+# connect: {"from":"to_id_out2", "to":"from_id", "fromlabel":"sig_out2", "invert": false, "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;curved=0;endArrow=blockThin;endFill=1;fontSize=11;"}
+# connect: {"from":"to_id_in0", "to":"from_id", "fromlabel":"sig_in0", "invert": true, "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;curved=0;endArrow=blockThin;endFill=1;fontSize=11;"}
+# connect: {"from":"to_id_in1", "to":"from_id", "fromlabel":"sig_in1", "invert": true, "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;curved=0;endArrow=blockThin;endFill=1;fontSize=11;"}
+# connect: {"from":"to_id_in2", "to":"from_id", "fromlabel":"sig_in2", "invert": true, "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;curved=0;endArrow=blockThin;endFill=1;fontSize=11;"}
+from_id,to_id_out0,to_id_out1,to_id_out2,to_id_in0,to_id_in1,to_id_in2,height,sig_out0,sig_out1,sig_out2,sig_in0,sig_in1,sig_in2
+node_0,node_1,node_3,node_5,,,,84,sig00_0_to_1,sig10_0_to_3,sig20_0_to_5,,,
+node_1,node_2,node_4,node_6,,,,70,sig01_1_to_2,sig11_1_to_4,sig21_1_to_6,,,
+node_2,node_5,node_7,,node_0,,,56,sig12_2_to_5,sig22_2_to_7,,sig02_2_to_0,,
+node_3,node_4,node_6,node_8,,,,70,sig03_3_to_4,sig13_3_to_6,sig23_3_to_8,,,
+node_4,node_5,node_7,node_9,,,,56,sig04_4_to_5,sig14_4_to_7,sig24_4_to_9,,,
+node_5,node_8,,,node_3,node_0,,70,sig15_5_to_8,,,sig05_5_to_3,sig25_5_to_0,
+node_6,node_7,node_9,,node_1,,,42,sig06_6_to_7,sig16_6_to_9,,sig26_6_to_1,,
+node_7,node_8,,,node_0,node_2,,70,sig07_7_to_8,,,sig17_7_to_0,sig27_7_to_2,
+node_8,node_9,,,node_1,node_3,,70,sig08_8_to_9,,,sig18_8_to_1,sig28_8_to_3,
+node_9,,,,node_6,node_2,node_4,84,,,,sig09_9_to_6,sig19_9_to_2,sig29_9_to_4

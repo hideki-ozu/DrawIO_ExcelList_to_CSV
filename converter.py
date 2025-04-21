@@ -1,120 +1,134 @@
 import csv
+from collections import defaultdict
+import sys
 
-# 2. 入力ファイルからデータを読み込む関数
-def read_source_data(input_path):
-    """
-    指定されたパスのCSVファイルからデータを読み込みます。
+def convert_csv_to_custom_format(input_csv_path, output_csv_path):
+    node_data = defaultdict(lambda: {
+        'outgoing_targets': [],
+        'outgoing_signals': [],
+        'incoming_targets': [],
+        'incoming_signals': [],
+        'incoming_count': 0,
+        'outgoing_count': 0,
+        'height': 0
+    })
 
-    Args:
-        input_path (str): 入力CSVファイルのパス。
-
-    Returns:
-        list: ヘッダーを除いたCSVデータのリスト。各行は辞書形式。
-              例: [{'From': 'node_0', 'Signal': 'sig00_0_to_1', 'Dist': 'OUT', 'To': 'node_1'}, ...]
-              エラー発生時は空のリストを返す。
-    """
-    data = []
     try:
-        with open(input_path, 'r', encoding='utf-8', newline='') as f:
-            reader = csv.DictReader(f)
+        with open(input_csv_path, 'r', encoding='utf-8') as infile:
+            reader = csv.DictReader(infile)
+            if not reader.fieldnames or not all(f in reader.fieldnames for f in ['From', 'Signal', 'Dist', 'To']):
+                 print(f"エラー: 入力CSV '{input_csv_path}' に必要なヘッダー（'From', 'Signal', 'Dist', 'To'）がありません。")
+                 return
+
             for row in reader:
-                data.append(row)
+                from_node = row.get('From')
+                signal = row.get('Signal')
+                dist = row.get('Dist')
+                to_node = row.get('To')
+
+                if not all([from_node, signal, dist, to_node]):
+                    print(f"警告: 不完全なデータ行をスキップしました: {row}")
+                    continue
+
+                from_node = from_node.strip()
+                to_node = to_node.strip()
+                signal = signal.strip()
+
+                source = from_node
+                target = to_node
+
+                if dist.upper() == 'OUT':
+                    node_data[source]['outgoing_targets'].append(target)
+                    node_data[source]['outgoing_signals'].append(signal)
+                    node_data[source]['outgoing_count'] += 1
+                    node_data[target]['incoming_count'] += 1
+                elif dist.upper() == 'IN':
+                    node_data[source]['incoming_targets'].append(target)
+                    node_data[source]['incoming_signals'].append(signal)
+                    node_data[source]['incoming_count'] += 1
+                    node_data[target]['outgoing_count'] += 1
+                else:
+                    print(f"警告: 不明なDist値 '{dist}' を含む行をスキップしました: {row}")
+                    continue
+
+        for node in node_data:
+            in_count = node_data[node]['incoming_count']
+            out_count = node_data[node]['outgoing_count']
+            node_data[node]['height'] = max(in_count, out_count) * 14
+
+        output_rows = []
+        max_targets_out = max((len(data['outgoing_targets']) for data in node_data.values()), default=0)
+        max_signals_out = max((len(data['outgoing_signals']) for data in node_data.values()), default=0)
+        max_targets_in = max((len(data['incoming_targets']) for data in node_data.values()), default=0)
+        max_signals_in = max((len(data['incoming_signals']) for data in node_data.values()), default=0)
+
+        header = ['from_id']
+        header.extend([f'to_id_out{i}' for i in range(max_targets_out)])
+        header.extend([f'to_id_in{i}' for i in range(max_targets_in)])
+        header.append('height')
+        header.extend([f'sig_out{i}' for i in range(max_signals_out)])
+        header.extend([f'sig_in{i}' for i in range(max_signals_in)])
+        output_rows.append(header)
+
+        for from_node, data in node_data.items():
+            height = data['height']
+            targets_out = data['outgoing_targets']
+            signals_out = data['outgoing_signals']
+            targets_in = data['incoming_targets']
+            signals_in = data['incoming_signals']
+
+            # targets_outをmax_targets_outの長さに調整
+            targets_out_padded = targets_out + [''] * (max_targets_out - len(targets_out))
+
+            # targets_inをmax_targets_inの長さに調整
+            targets_in_padded = targets_in + [''] * (max_targets_in - len(targets_in))
+
+            # signals_outをmax_signals_outの長さに調整
+            signals_out_padded = signals_out + [''] * (max_signals_out - len(signals_out))
+
+            # signals_inをmax_signals_inの長さに調整
+            signals_in_padded = signals_in + [''] * (max_signals_in - len(signals_in))
+            output_row = [from_node] + targets_out_padded + targets_in_padded + [height] + signals_out_padded + signals_in_padded
+            output_rows.append(output_row)
+
+        # 設定部作成
+        fp = open(output_csv_path, 'w')
+        setting_part_label = '# label: %from_id%\n'
+        fp.write(setting_part_label)
+        setting_part_style = '# style: label;\n'
+        fp.write(setting_part_style)
+        setting_part_layout = '# layout: horizontalflow\n'
+        fp.write(setting_part_layout)
+        setting_part_height = '# height: @height\n'
+        fp.write(setting_part_height)
+        
+        for i in range(max_targets_out):
+            setting_part_connect = f'# connect: {{"from":"to_id_out{i}", "to":"from_id", "fromlabel":"sig_out{i}", "invert": false, "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;curved=0;endArrow=blockThin;endFill=1;fontSize=11;"}}\n'
+            fp.write(setting_part_connect)
+        for i in range(max_targets_in):
+            setting_part_connect = f'# connect: {{"from":"to_id_in{i}", "to":"from_id", "fromlabel":"sig_in{i}", "invert": true, "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;curved=0;endArrow=blockThin;endFill=1;fontSize=11;"}}\n'
+            fp.write(setting_part_connect)
+
+        fp.close()
+
+        with open(output_csv_path, 'a', newline='', encoding='utf-8') as outfile:
+            writer = csv.writer(outfile)
+            writer.writerows(output_rows)
+
+        print(f"変換完了: '{output_csv_path}' に出力しました。")
+
     except FileNotFoundError:
-        print(f"エラー: 入力ファイルが見つかりません: {input_path}")
+        print(f"エラー: 入力ファイル '{input_csv_path}' が見つかりません。")
     except Exception as e:
-        print(f"エラー: 入力ファイルの読み込み中にエラーが発生しました: {e}")
-    return data
+        print(f"エラーが発生しました: {e}")
 
-# 3. 読み込んだデータを加工する関数
-def process_data(source_data):
-    """
-    読み込んだデータをdraw.io用のCSV形式に加工します。
-
-    Args:
-        source_data (list): read_source_data関数で読み込んだデータのリスト。
-
-    Returns:
-        list: draw.ioインポート用のCSVデータリスト。
-              各行はリスト形式: [edge_label, source_node, target_node]
-              例: [['sig00_0_to_1', 'node_0', 'node_1'], ...]
-    """
-    drawio_data = []
-    # draw.io CSVのヘッダーを追加
-    drawio_data.append(['# label', 'source', 'target'])
-    # データ行を追加
-    for row in source_data:
-        from_node = row.get('From')
-        signal = row.get('Signal')
-        dist = row.get('Dist')
-        to_node = row.get('To')
-
-        if not all([from_node, signal, dist, to_node]):
-            print(f"警告: 不完全なデータ行をスキップしました: {row}")
-            continue
-
-        if dist.upper() == 'OUT':
-            source = from_node
-            target = to_node
-        elif dist.upper() == 'IN':
-            source = to_node
-            target = from_node
-        else:
-            print(f"警告: 不明なDist値 '{dist}' を含む行をスキップしました: {row}")
-            continue
-
-        drawio_data.append([signal, source, target])
-
-    return drawio_data
-
-# 4. 加工したデータを出力する関数
-def write_drawio_csv(output_path, drawio_data):
-    """
-    加工したデータを指定されたパスにCSVファイルとして出力します。
-
-    Args:
-        output_path (str): 出力CSVファイルのパス。
-        drawio_data (list): process_data関数で加工されたdraw.io用データのリスト。
-
-    Returns:
-        bool: 出力が成功した場合はTrue、失敗した場合はFalse。
-    """
-    try:
-        with open(output_path, 'w', encoding='utf-8', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerows(drawio_data)
-        return True
-    except Exception as e:
-        print(f"エラー: 出力ファイルの書き込み中にエラーが発生しました: {e}")
-        return False
-
-# 1. main部
-def main():
-    """
-    プログラムのエントリーポイント。
-    入力ファイルの読み込み、データ加工、出力ファイルへの書き込みを実行します。
-    """
-    input_file = 'source_data.csv'
-    output_file = 'drawio_input.csv'
-
-    print(f"入力ファイル: {input_file}")
-    source_data = read_source_data(input_file)
-
-    if not source_data:
-        print("入力データが空のため、処理を終了します。")
-        return
-
-    print(f"{len(source_data)} 件のデータを読み込みました。")
-
-    print("データをdraw.io形式に加工しています...")
-    drawio_data = process_data(source_data)
-
-    print(f"加工後のデータ件数（ヘッダー含む）: {len(drawio_data)}")
-
-    print(f"出力ファイル: {output_file}")
-    if write_drawio_csv(output_file, drawio_data):
-        print("draw.io用CSVファイルの作成が完了しました。")
-    else:
-        print("draw.io用CSVファイルの作成に失敗しました。")
-
+        
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) != 3:
+        print("使用法: python converter.py <入力CSVファイルパス> <出力CSVファイルパス>")
+        sys.exit(1)
+
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+    convert_csv_to_custom_format(input_file, output_file)
+
