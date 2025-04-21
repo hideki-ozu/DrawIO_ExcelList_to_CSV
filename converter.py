@@ -97,11 +97,6 @@ def convert_csv_to_custom_format(input_csv_path, output_csv_path):
                 dist = row.get('Dist')
                 to_node = row.get('To')
 
-                # すべての必須フィールドが存在するか確認
-                if not all([from_node, signal, dist, to_node]):
-                    print(f"警告: 不完全なデータ行をスキップしました: {row}")
-                    continue
-
                 # 値の前後の空白を削除
                 from_node = from_node.strip()
                 to_node = to_node.strip()
