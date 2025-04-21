@@ -2,6 +2,63 @@
 import csv  # CSVファイルの読み書きに使用
 from collections import defaultdict  # 初期値を持つ辞書型を使用するため
 import sys  # コマンドライン引数の処理に使用
+import tkinter as tk  # GUIの作成に使用
+from tkinter import filedialog  # ファイル選択ダイアログに使用
+import os  # ファイルパス操作に使用
+
+def select_file(title="ファイルを選択", filetypes=(("CSVファイル", "*.csv"), ("すべてのファイル", "*.*"))):
+    """
+    GUIでファイルを選択するためのダイアログを表示する関数
+    
+    Args:
+        title (str): ダイアログのタイトル
+        filetypes (tuple): 選択可能なファイルタイプのリスト
+        
+    Returns:
+        str: 選択されたファイルのパス。キャンセルされた場合は空文字列
+    """
+    # tkinterのルートウィンドウを作成し、非表示にする
+    root = tk.Tk()
+    root.withdraw()
+    
+    # ファイル選択ダイアログを表示
+    file_path = filedialog.askopenfilename(
+        title=title,
+        filetypes=filetypes
+    )
+    
+    # ルートウィンドウを破棄
+    root.destroy()
+    
+    return file_path
+
+def select_save_file(title="保存先を選択", defaultextension=".csv", filetypes=(("CSVファイル", "*.csv"), ("すべてのファイル", "*.*"))):
+    """
+    GUIで保存先ファイルを選択するためのダイアログを表示する関数
+    
+    Args:
+        title (str): ダイアログのタイトル
+        defaultextension (str): デフォルトのファイル拡張子
+        filetypes (tuple): 選択可能なファイルタイプのリスト
+        
+    Returns:
+        str: 選択された保存先ファイルのパス。キャンセルされた場合は空文字列
+    """
+    # tkinterのルートウィンドウを作成し、非表示にする
+    root = tk.Tk()
+    root.withdraw()
+    
+    # ファイル保存ダイアログを表示
+    file_path = filedialog.asksaveasfilename(
+        title=title,
+        defaultextension=defaultextension,
+        filetypes=filetypes
+    )
+    
+    # ルートウィンドウを破棄
+    root.destroy()
+    
+    return file_path
 
 def convert_csv_to_custom_format(input_csv_path, output_csv_path):
     """
@@ -175,13 +232,35 @@ def convert_csv_to_custom_format(input_csv_path, output_csv_path):
 
 # メイン処理
 if __name__ == "__main__":
+    # 入力ファイルと出力ファイルのパスを初期化
+    input_file = ""
+    output_file = ""
+    
     # コマンドライン引数の数をチェック
-    if len(sys.argv) != 3:
-        print("使用法: python converter.py <入力CSVファイルパス> <出力CSVファイルパス>")
-        sys.exit(1)
-
-    # コマンドライン引数から入力・出力ファイルのパスを取得
-    input_file = sys.argv[1]
-    output_file = sys.argv[2]
+    if len(sys.argv) == 3:
+        # コマンドライン引数から入力・出力ファイルのパスを取得
+        input_file = sys.argv[1]
+        output_file = sys.argv[2]
+    else:
+        # GUIでファイル選択
+        print("入力CSVファイルを選択してください...")
+        input_file = select_file(title="入力CSVファイルを選択")
+        
+        # 入力ファイルが選択されなかった場合は終了
+        if not input_file:
+            print("入力ファイルが選択されませんでした。処理を終了します。")
+            sys.exit(1)
+            
+        print("出力CSVファイルの保存先を選択してください...")
+        output_file = select_save_file(title="出力CSVファイルの保存先を選択")
+        
+        # 出力ファイルが選択されなかった場合は終了
+        if not output_file:
+            print("出力ファイルが選択されませんでした。処理を終了します。")
+            sys.exit(1)
+    
+    print(f"入力ファイル: {input_file}")
+    print(f"出力ファイル: {output_file}")
+    
     # 変換処理を実行
     convert_csv_to_custom_format(input_file, output_file)
