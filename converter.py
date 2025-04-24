@@ -1,12 +1,14 @@
 # 必要なライブラリのインポート
 import csv  # CSVファイルの読み書きに使用
+import pandas as pd # Excelファイルの読み書きに使用
 from collections import defaultdict  # 初期値を持つ辞書型を使用するため
 import sys  # コマンドライン引数の処理に使用
 import tkinter as tk  # GUIの作成に使用
 from tkinter import filedialog  # ファイル選択ダイアログに使用
 import os  # ファイルパス操作に使用
 
-def select_file(title="ファイルを選択", filetypes=(("CSVファイル", "*.csv"), ("すべてのファイル", "*.*"))):
+
+def select_file(title="ファイルを選択", filetypes=(("Excelファイル", "*.xlsx;*.xls"), ("CSVファイル", "*.csv"), ("すべてのファイル", "*.*"))):
     """
     GUIでファイルを選択するためのダイアログを表示する関数
     
@@ -70,6 +72,8 @@ def convert_csv_to_custom_format(input_csv_path, output_csv_path):
     """
     # ノードデータを格納するための辞書を初期化
     # 各ノードに対して、接続情報や信号、高さなどの属性を保持する
+    # ノードデータを格納するための辞書を初期化
+    # 各ノードに対して、接続情報や信号、高さなどの属性を保持する
     node_data = defaultdict(lambda: {
         'outgoing_targets': [],  # 出力先ノードのリスト
         'outgoing_signals': [],  # 出力信号のリスト
@@ -81,47 +85,77 @@ def convert_csv_to_custom_format(input_csv_path, output_csv_path):
     })
 
     try:
-        # 入力CSVファイルを開いて読み込む
-        with open(input_csv_path, 'r', encoding='utf-8') as infile:
-            reader = csv.DictReader(infile)
-            # 必要なヘッダーが存在するか確認
-            if not reader.fieldnames or not all(f in reader.fieldnames for f in ['From', 'Signal', 'Dist', 'To']):
-                 print(f"エラー: 入力CSV '{input_csv_path}' に必要なヘッダー（'From', 'Signal', 'Dist', 'To'）がありません。")
-                 return
+        # ファイルの拡張子を取得
+        file_extension = os.path.splitext(input_csv_path)[1].lower()
+        
+        data_rows = []
+        required_headers = ['From', 'Signal', 'Dist', 'To']
 
-            # CSVの各行を処理
-            for row in reader:
-                # 各列の値を取得
-                from_node = row.get('From')
-                signal = row.get('Signal')
-                dist = row.get('Dist')
-                to_node = row.get('To')
+        # 拡張子に応じてファイルを読み込む
+        if file_extension == '.csv':
+            # CSVファイルを読み込む
+            with open(input_csv_path, 'r', encoding='utf-8') as infile:
+                reader = csv.DictReader(infile)
+                # 必要なヘッダーが存在するか確認
+                if not reader.fieldnames or not all(f in reader.fieldnames for f in required_headers):
+                    print(f"エラー: 入力CSV '{input_csv_path}' に必要なヘッダー（{', '.join(required_headers)}）がありません。")
+                    return
+                data_rows = list(reader) # イテレータをリストに変換
+        elif file_extension in ['.xlsx', '.xls']:
+            # Excelファイルを読み込む
+            try:
+                df = pd.read_excel(input_csv_path)
+                # 必要なヘッダーが存在するか確認
+                if not all(f in df.columns for f in required_headers):
+                    print(f"エラー: 入力Excel '{input_csv_path}' に必要なヘッダー（{', '.join(required_headers)}）がありません。")
+                    return
+                # DataFrameを辞書のリストに変換
+                data_rows = df.to_dict('records')
+            except Exception as e:
+                print(f"エラー: Excelファイル '{input_csv_path}' の読み込み中にエラーが発生しました: {e}")
+                return
+        else:
+            # サポートされていないファイル形式の場合
+            print(f"エラー: サポートされていないファイル形式です: {file_extension}")
+            return
 
-                # 値の前後の空白を削除
-                from_node = from_node.strip()
-                to_node = to_node.strip()
-                signal = signal.strip()
+        # 読み込んだデータを処理
+        for row in data_rows:
+            # 各列の値を取得 (Excelの場合、数値として読み込まれる可能性を考慮し、strに変換)
+            from_node = str(row.get('From', '')).strip()
+            signal = str(row.get('Signal', '')).strip()
+            dist = str(row.get('Dist', '')).strip()
+            to_node = str(row.get('To', '')).strip()
 
-                source = from_node
-                target = to_node
+            #signalが'nan'の場合は空文字に変換 （Excelからの読み込み時に発生する可能性がある）
+            if signal == 'nan':
+                signal = ''
 
-                # 方向（OUT/IN）に基づいてノードデータを更新
-                if dist.upper() == 'OUT':
-                    # OUTの場合：sourceからtargetへの出力接続
-                    node_data[source]['outgoing_targets'].append(target)
-                    node_data[source]['outgoing_signals'].append(signal)
-                    node_data[source]['outgoing_count'] += 1
-                    node_data[target]['incoming_count'] += 1
-                elif dist.upper() == 'IN':
-                    # INの場合：sourceへのtargetからの入力接続
-                    node_data[source]['incoming_targets'].append(target)
-                    node_data[source]['incoming_signals'].append(signal)
-                    node_data[source]['incoming_count'] += 1
-                    node_data[target]['outgoing_count'] += 1
-                else:
-                    # 不明な方向値の場合はスキップ
-                    print(f"警告: 不明なDist値 '{dist}' を含む行をスキップしました: {row}")
-                    continue
+            # いずれかの必須フィールドが空の場合はスキップ（またはエラー処理）
+            #if not all([from_node, signal, dist, to_node]):
+            #    print(f"警告: 必須フィールドが空の行をスキップしました: {row}")
+            #    continue
+
+            source = from_node
+            target = to_node
+
+            # 方向（OUT/IN）に基づいてノードデータを更新
+            if dist.upper() == 'OUT':
+                # OUTの場合：sourceからtargetへの出力接続
+                node_data[source]['outgoing_targets'].append(target)
+                node_data[source]['outgoing_signals'].append(signal)
+                node_data[source]['outgoing_count'] += 1
+                node_data[target]['incoming_count'] += 1
+            elif dist.upper() == 'IN':
+                # INの場合：sourceへのtargetからの入力接続
+                node_data[source]['incoming_targets'].append(target)
+                node_data[source]['incoming_signals'].append(signal)
+                node_data[source]['incoming_count'] += 1
+                node_data[target]['outgoing_count'] += 1
+            else:
+                # 不明な方向値の場合はスキップ
+                print(f"警告: 不明なDist値 '{dist}' を含む行をスキップしました: {row}")
+                continue
 
         # 各ノードの高さを計算
         # 高さは入力または出力接続の数（多い方）に基づいて決定

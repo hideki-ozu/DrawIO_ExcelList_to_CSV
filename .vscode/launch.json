@@ -12,7 +12,7 @@
             "console": "integratedTerminal",
 
             "args": [
-                "source_data.csv",
+                "source_data.xlsx",
                 "drawio_input.csv"
             ],
         }
